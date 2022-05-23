@@ -7,13 +7,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.*;
 
 public class Games {
 
@@ -35,20 +33,23 @@ public class Games {
 
         // -------------------
 
-        // TODO: Wie viele Spiele sind Bundesliga Spiele? Bundesliga ist ein Enum, kein String. (contain BUNDESLIGA)?
+        // Wie viele Spiele sind Bundesliga Spiele? Bundesliga ist ein Enum, kein String. (contain BUNDESLIGA)?
+        List countBundesliga = games.stream().filter(game -> game.getInfo().contains("BUNDESLIGA")).toList();
+        long bundesligaGameCount = countBundesliga.size();
         // (Lösung mit filter)
 
-        long bundesligaGameCount = -1;
+
 
         System.out.println("There were " + bundesligaGameCount + " Bundesliga games");
         System.out.println();
 
         // -------------------
 
-        // TODO: Welche Spiele sind Auswärts- und welche Heimspiele?
+        // Welche Spiele sind Auswärts- und welche Heimspiele?
         // (Lösung mit partitionBy)
 
-        Map<Boolean, List<Game>> homeAwayMap = null;
+
+        Map<Boolean, List<Game>> homeAwayMap = games.stream().collect(partitioningBy(game -> game.getHome().equals(BAYERN)));
 
         System.out.println("*** HOME ***");
         homeAwayMap.get(true).forEach(System.out::println);
@@ -58,10 +59,15 @@ public class Games {
 
         // -------------------
 
-        // TODO Gruppiere die Spiele in won, lost und draw (draw = Unentschieden)
+        // Gruppiere die Spiele in won, lost und draw (draw = Unentschieden)
         // (Lösung mit groupingBy)
 
-        Map<Result, List<Game>> wonLostDrawMap = null;
+        Map<Result, List<Game>> wonLostDrawMap = games.stream().filter(game -> game.getHome().equals(BAYERN))
+                .collect(Collectors.groupingBy(game -> {if(game.getHomeGoals()>game.getAwayGoals()) return Result.WON;
+                    else if(game.getHomeGoals()<game.getAwayGoals()) return Result.LOST;
+                    else return Result.DRAW;
+                }));
+
 
         System.out.println("*** WON ***");
         wonLostDrawMap.get(Result.WON).forEach(System.out::println);
@@ -73,73 +79,76 @@ public class Games {
 
         // -------------------
 
-        // TODO Wie viele Tore wurden im Durchschnitt pro Spiel erzielt? mapToInt
-        // (Lösung mit mapToInt)
-        double avgGoalsPerGame1 = 0.0;
+        //  Wie viele Tore wurden im Durchschnitt pro Spiel erzielt? mapToInt
+        double avgGoalsPerGame1= games.stream().mapToInt(Game::goalCount).average().orElse(0.0);
+
+
 
         System.out.printf("Average goals per game: %.2f\n", avgGoalsPerGame1);
 
-        // TODO Wie viele Tore wurden im Durchschnitt pro Spiel erzielt? averagingDouble
+        // TWie viele Tore wurden im Durchschnitt pro Spiel erzielt? averagingDouble
         // (Lösung mit withCollectors.averagingDouble)
-        double avgGoalsPerGame2 = 0.0;
+        double avgGoalsPerGame2 = games.stream().collect(Collectors.averagingDouble(Game::goalCount));
 
         System.out.printf("Average goals per game: %.2f\n", avgGoalsPerGame2);
         System.out.println();
 
         // -------------------
 
-        // TODO Wie viele Spiele hat Bayern München zu Hause gewonnen?
+        //  Wie viele Spiele hat Bayern München zu Hause gewonnen?
         // (home equals BAYERN)?
         // (Lösung mit double filter und count)
-        long wonHomeGamesCount = -1;
+        long wonHomeGamesCount = games.stream().filter(game -> game.getHome().equals(BAYERN)).filter(game -> game.getHomeGoals()>game.getAwayGoals()).count();
 
         System.out.println(BAYERN + " won " + wonHomeGamesCount + " games at home");
         System.out.println();
 
         // -------------------
 
-        // TODO Was war das Spiel mit den wenigsten Toren? sorted findFirst
+        // Was war das Spiel mit den wenigsten Toren? sorted findFirst
         // (Lösung mit sorted und findFirst)
-        Game leastNumberOfGoalsGame1 = null;
+        Game leastNumberOfGoalsGame1 = games.stream().sorted(Comparator.comparingInt(Game::goalCount)).findFirst().orElse(null);
 
         System.out.println("Game with least number of goals: " + leastNumberOfGoalsGame1);
 
-        // TODO Was war das Spiel mit den wenigsten Toren? min Comparator.comparingInt
+        //  Was war das Spiel mit den wenigsten Toren? min Comparator.comparingInt
         // (Lösung mit min und Comparator.comparingInt)
-        Game leastNumberOfGoalsGame2 = null;
+        Game leastNumberOfGoalsGame2 = games.stream().min(Comparator.comparingInt(Game::goalCount)).orElse(null);
 
         System.out.println("Game with least number of goals: " + leastNumberOfGoalsGame2);
         System.out.println();
 
         // -------------------
 
-        // TODO Welche unterschiedlichen (distinct) Startzeiten gibt es?
+        // Welche unterschiedlichen (distinct) Startzeiten gibt es?
         // (Lösung mit einem stream und Collectors.joining)
-        String startingTimesString = null;
+        String startingTimesString = games.stream().map(Game::getTime).distinct().collect(Collectors.joining(","+ " "));
 
         System.out.println("Distinct starting times: " + startingTimesString);
         System.out.println();
 
         // -------------------
 
-        // TODO hat Bayern ein Auswärtsspiel mit mindestens 2 Toren Unterschied gewonnen?
+        // hat Bayern ein Auswärtsspiel mit mindestens 2 Toren Unterschied gewonnen?
         // (home equals BAYERN)?
         // (Lösung mit anyMatch)
 
-        boolean bayernWon = false;
+        boolean bayernWon = games.stream().filter(game -> game.getAway().equals(BAYERN))
+                .anyMatch(game -> (game.getAwayGoals() - game.getHomeGoals() >=2));
 
         System.out.println("Bayern won away game with at least 2 goals difference: " + (bayernWon ? "yes" : "no"));
         System.out.println();
 
         // -------------------
 
-        // TODO Ein Freund von dir gab dir die Spiele von 2019, die jedoch nach der Heimmannschaft gruppiert wurden. Du möchtest aber alle Spiele als einfache Liste abrufen!
+        // Ein Freund von dir gab dir die Spiele von 2019, die jedoch nach der Heimmannschaft gruppiert wurden. Du möchtest aber alle Spiele als einfache Liste abrufen!
         // (Lösung with flatMap und Collectors.toList)
         Map<String, List<Game>> games2019ByHomeTeam = games.stream()
                 .filter(game -> game.getDate().contains("2019"))
                 .collect(Collectors.groupingBy(Game::getHome));
-        List<Game> flattenedGames = null;
+        System.out.println(games2019ByHomeTeam);
+       List<Game> flattenedGames = games2019ByHomeTeam.values().stream().flatMap(Collection::stream).toList();
 
-        flattenedGames.forEach(System.out::println);
+       flattenedGames.forEach(System.out::println);
     }
 }
